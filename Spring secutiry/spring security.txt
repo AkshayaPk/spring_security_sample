@@ -1,0 +1,220 @@
+Spring Security : 
+
+What are the JAR's that I need to add to configure Spring Security in my application?
+spring security web, spring security config , commons logging
+
+How to configure Spring security or bootstrap it in web.xml?
+Using a listener class called org.springframework.web.context.ContextLoaderListener.
+
+Do i need to add a config location?
+Yes to specify where to look for spring security configuration
+context-param
+param name - contextConfigLocation
+param value - /web-inf/config/security-config.xml
+/context param
+
+Do i need to specify an application entry point?
+Yes to route all incoming requests through to a secure filter called DelegatingFilterProxy
+We need to specify a name : springSecurityFilterChain
+Specify a filtermapping - springSecurityFilterChain 
+url pattern - /*
+
+To have separation of concern , we have security config in a separate file.
+Has a namespace associated with it.
+
+What are the namespaces that I need to add to my security-config.xml file?
+
+How to specify a simple configuration using the http tag for intercepting all URL's and checking for a particular role?
+http auto-config="true"
+intercept-url pattern="/**" access="ROLE_USER"
+</http
+
+How to setup a user using spring security?
+We have to use an authentication manager , and specify a userservice with a username and password with authorities as ROLE_USER
+
+A default login page is created , and when we enter the specific username and password , only then are we redirected to our application's homepage.
+
+TO add and remove a user , we have to deploy the application.
+We have to redeploy our WAR. That is static.  We need dynamic.
+
+Since we need dynamic users to be registered and removed , we have to go for database.
+
+We need two tables - user and authorities for user details and authorization
+
+If we need to use a database for our authentication and authorization dynamically
+then we need to add spring-jdbc jar and mysql connector jar to maven and configure bean properties
+to connect to the database , access the tables within the database
+
+For that we need to write the following : 
+
+<authentication-manager>
+	<!--  <authentication-provider user-service-ref="userDetailsService"/>-->
+	
+		<authentication-provider>
+		<jdbc-user-service data-source-ref="dataSource"/>
+		</authentication-provider>
+			
+		
+	</authentication-manager>
+
+
+	<beans:bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<beans:property name="driverClassName" value="com.mysql.jdbc.Driver"></beans:property>
+		<beans:property name="url"
+			value="jdbc:mysql://localhost:3306/fitnessTracker"></beans:property>
+		<beans:property name="username" value="root"></beans:property>
+		<beans:property name="password" value="machadon"></beans:property>
+	</beans:bean>
+
+To use spring security and enable authorization in the login pages and other pages that we have in our application
+We have to add a jar called spring security taglibs
+to use three tags : authorize authenticate and accesslists
+
+authentication tag property : 
+
+name , authorities , credentials , details , principal , isAuthenticated
+
+To display the current logged in user - return from index.jsp
+add declaration jsp header
+passs through authentication sequence.
+
+ <sec:authentication property="name"/> to find the current user
+
+Authorize tag - used to retrict certain pages to user
+multiple ways to lock down access
+
+url attribute - "used with config"
+var attribute - "save on the overhead"
+method - "http method as get or post"
+access - "with expression language"
+ifAnyGranted , ifAllGranted , ifNotGranted
+
+If while doin authorization I get a 403 error? What is the problem?
+That means that I havent changed the access for all pages to route through the filter that has only ROLE_USER 
+I could add a comma and say ROLE_ADMIN. or go to the database and add the same user with ROLE_USER.
+
+How to add MD5 hash?
+<password encoder-hash ="MD5">
+Write a JUNIT case to identify the MD5 code for the password 123
+
+Using BCrypt has no disadvantages but it is 60 characters long.
+
+Similarly to use bcrypt we need to change the encoder-hash to bcrypt.
+Change the database length to 60 and write a separate JUnit test case to identify the bcrypt password for string.
+
+Developing a custom login form is better cause when it is in production is very bad to have a default login page.
+Not the most used login form.
+Not authenticated , kick us to the 401 page says full authentication is required to access this resource.
+
+Intercept url , Form login element - To security-config.xml
+Create a LoginController - direct our JSP page , allows us to return data to index page. App becomes more featurerich.Depends on Configuration
+Add a login.jsp page - form url of j_spring_security_check , j_username , j_password
+
+How to do a login error page? if login fails?
+
+Add error param to response.
+Add form element authentication-failure-url.
+We are going to reuse our page.
+intercept-url for loginfailed.
+Add loginfailed for loginController.
+
+To add a logout feature:
+Add a logout element
+intercept url for logout
+add an additional entry in loginController
+Have a logout.jsp page
+
+What is unauthorized 403 page configuration
+The way that we handle this is access-denied-handler
+Create a 403.jsp page
+add error403 in loginController
+Add a Mysql user to test unauthorized user.
+
+How to do access-control-lists using expressions
+We have to enable configuration to use-expressions="true"
+THis should be done on the http element.
+We can have some builtin expressions - hasRole , hasAnyRole,permitAll , hasPermission
+It is all or nothing , cant mix expressions and statically define things.
+
+If we dont have hasRole('ROLE_USER') but we have ROLE_USER as access - Failed to evaluate expression ROLE_USER exception
+The above is only if we are using expressions.
+
+How to provide method level security using expressions?
+@PreAuthorize - someone has a role before the method is executed
+@PostAuthorize - ran after method executes , like filter.
+
+We need to add element <global-method-security>
+
+pre-post-annotations
+secured-annotations
+jsr250-annotations
+
+The context matters. Where we should place the global security element.
+
+We have two contexts in our application , this is not a problem. 
+We have an mvc context- loaded by spring mvc dispatcher servlet - all controllers and view resolvers defined.
+security context defined. - loaded using contextloaderlistener
+
+Problem : MVC context can see things within the security/loader context but not vice versa
+We want to add security on our controller methods. So we have to place it within our mvc context.
+
+Add the configuration in servletconfig.xml 
+and add method level security with prepost annotation @PreAuthorize
+
+Add a person with ROLE_USER in the database and check whether he is able to do a post method execution when the POST method is annotated with @PreAuthorize and role as ROLE_ADMIN
+We will get a Http status 405 error - POST is not supported.
+
+What are permissions?
+Just like method level security , we can go deeper and give persmissions per object.
+A level deepre than role.
+hasPermission(#goal,'createGoal') - Object,Permission
+<security:expression-handler ref="fitnessExpressionHandler">
+
+End up writing a custom Permission evaluator.
+Implement PermissionEvaluator interface
+hasPermission(auth,targetObj,permission-typically a string)
+hasPermission(auth,id,string type,permission)
+Every implementation will be different.
+We will look at a simple implementation
+Inject whatever we need into the evaluator to use.
+
+LDAP authentication : 
+
+LDAP is one of the most common methods used to authenticate user.
+Connects to a local LDAP server for authentication
+Similar to jdbc-user-service like ldap-authentication-provider
+
+group-search-filter
+group-search-base
+user-search-base
+user-search-filter
+Can be combined with user-details-service element.
+
+Another element present within the namespace is ldap-server
+Can be used to create a test server.
+loads an ldif file for storing our users and load test users
+default port 389 can be overridden
+There are 3 additional jars
+org.slf4j
+org.apache.directory.server
+org.springframework.security 
+
+Spring enables us to force all traffic over HTTPS
+We have been giving it over a non secure URL , IF some used a keylogger they can sniff our network traffic
+
+Man in the middle attack - OWASP to figure it out , basically someone watchin our traffic
+Safer way , HTTPS
+requires-channel="https"
+
+We need to setup a security certificate a self signed is fine but not for production
+We want to use keytool command to generate a self signed certificate
+uncomment the connector within the tomcat connection
+enable requires-channel inside our application.
+
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11Protocol"
+               maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+               clientAuth="false" sslProtocol="TLS" />
+
+Uncomment the above in tomcat/server.xml
+Also provide the keystoreFile directory and keystorePassword
